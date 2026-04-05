@@ -1,0 +1,219 @@
+<div id="suquelish-calendar-root" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 850px; width: 95%; border: 3px solid #1a237e; border-radius: 12px; padding: clamp(10px, 3vw, 25px); background: #ffffff; color: #1a237e; margin: 20px auto; box-shadow: 0 10px 30px rgba(26, 35, 126, 0.2); position: relative; box-sizing: border-box;">
+    
+    <style>
+        #calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+        .day-header {
+            font-weight: bold;
+            font-size: 0.65rem;
+            color: #1a237e;
+            border-bottom: 2px solid #ffd700; padding-bottom: 8px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            #calendar-grid { grid-template-columns: repeat(5, 1fr); }
+            #suquelish-calendar-root h2 { font-size: 1.2rem !important; }
+        }
+        /* Mobile View Edit: Show only Month Name, Day Name, Day Number */
+        @media (max-width: 480px) {
+            #calendar-grid, #prev-month, #next-month, #limbo-display, div[style*="margin-top: 15px"], #year-display { 
+                display: none !important; 
+            }
+            #suquelish-calendar-root { border: none; box-shadow: none; padding: 10px; }
+            div[style*="background: #1a237e"] { background: transparent !important; color: #1a237e !important; padding: 0 !important; }
+            #mobile-day-info { display: block !important; font-size: 1.4rem; font-weight: bold; text-align: center; margin-top: 5px; }
+        }
+    </style>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #1a237e; padding: 15px; border-radius: 8px; color: #ffd700; flex-wrap: wrap; gap: 10px;">
+        <button id="prev-month" style="cursor: pointer; padding: 8px 18px; background: #ffd700; color: #1a237e; border: none; border-radius: 4px; font-weight: bold;">&larr;</button>
+        <div style="text-align: center; flex: 1; min-width: 120px;">
+            <h2 id="month-display" style="margin: 0; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 2px;"></h2>
+            <div id="year-display" style="font-size: 1.1rem; font-weight: bold; opacity: 0.9;">6000 YOJ</div>
+            <div id="mobile-day-info" style="display: none;"></div>
+        </div>
+        <button id="next-month" style="cursor: pointer; padding: 8px 18px; background: #ffd700; color: #1a237e; border: none; border-radius: 4px; font-weight: bold;">&rarr;</button>
+    </div>
+    
+    <div id="calendar-grid">
+        <div class="day-header">Adroestoe</div>
+        <div class="day-header">Davestoe</div>
+        <div class="day-header">Tikonestoe</div>
+        <div class="day-header">Quhellestoe</div>
+        <div class="day-header">Kaparestoe</div>
+        <div class="day-header" style="color: #d32f2f;">Seejoorestoe</div>
+        <div class="day-header" style="color: #d32f2f;">Fayfeelestoe</div>
+        <div class="day-header" style="color: #d32f2f;">Ofarstestoe</div>
+        <div class="day-header" style="color: #0288d1;">Kami'estoe</div>
+        <div class="day-header" style="color: #388e3c;">Suwachi'estoe</div>
+    </div>
+
+    <div id="limbo-display" style="margin-top: 20px; padding: 25px; background: #fffde7; border-radius: 8px; display: none; text-align: center; border: 2px double #ffd700; position: relative;">
+        <strong id="limbo-header" style="color: #1a237e; font-size: 0.9rem;"></strong><br>
+        <span id="limbo-day-name" style="font-size: 1.4rem; color: #b71c1c; font-weight: bold; display: block; margin: 10px 0;"></span>
+        <small id="limbo-desc" style="font-style: italic; color: #444; display: block; max-width: 90%; margin: 0 auto; line-height: 1.4;"></small>
+    </div>
+
+    <div style="margin-top: 15px; font-size: 0.8rem; color: #555; border-top: 1px solid #ddd; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span id="current-pfs-year"></span>
+        <span id="edit-trigger" style="cursor: pointer; text-decoration: underline; background: #eee; padding: 4px 8px; border-radius: 4px;">Admin Access</span>
+    </div>
+
+    <script>
+    (function() {
+        const months = ["Nafftheo", "Hoseffi", "Benjamok", "Rubbon", "Sohmion", "Levi", "Judah", "Issakar", "Zebwon", "Dan", "Gad", "Asher"];
+        const dayNames = ["Adroestoe", "Davestoe", "Tikonestoe", "Quhellestoe", "Kaparestoe", "Seejoorestoe", "Fayfeelestoe", "Ofarstestoe", "Kami'estoe", "Suwachi'estoe"];
+        let limboData = [
+            { name: "Dathestoe", desc: "Day of Death: Failures and sins are acknowledged and mourned." },
+            { name: "Roglasshinestoe", desc: "Day of Reflection: Examining lessons learned and necessary changes." },
+            { name: "Stinestoe", desc: "Day of Passover: Renewal of the covenant with the King." },
+            { name: "Vyosmeepestoe", desc: "Eve of Hope Day: Anticipation for the new year begins." }
+        ];
+        let leapDayData = { name: "Kriskinestoe", desc: "Leap Day: Minister reads Bible verse, blessing the Nation, Church, and Citizens." };
+        
+        let customHolidays = JSON.parse(localStorage.getItem('suquelish_holidays') || '{}');
+        const epochDate = new Date(2026, 0, 1); 
+        let viewDate = new Date();
+        const todayReal = new Date();
+
+        function getSuquelishDate(date) {
+            const diff = Math.floor((date - epochDate) / (1000 * 60 * 60 * 24));
+            const leapCycles = Math.floor(diff / 1461);
+            const remainingDays = diff % 1461;
+            let yearInCycle = Math.floor(remainingDays / 365);
+            if (yearInCycle === 4) yearInCycle = 3;
+            const currentYOJ = 6000 + (leapCycles * 4) + yearInCycle;
+            const isLeapYear = (currentYOJ % 4 === 2); 
+            
+            let dayOfYear = remainingDays % 365;
+            if (remainingDays >= 1095 && isLeapYear) { dayOfYear = remainingDays - 1095; }
+
+            if (dayOfYear >= 360) {
+                return { isLimbo: true, dayIndex: dayOfYear - 360, year: currentYOJ, isLeap: isLeapYear, rawDiff: diff };
+            }
+            return { isLimbo: false, monthIdx: Math.floor(dayOfYear / 30), day: (dayOfYear % 30) + 1, year: currentYOJ, rawDiff: diff };
+        }
+
+        function render() {
+            const sq = getSuquelishDate(viewDate);
+            const sqToday = getSuquelishDate(todayReal);
+            const grid = document.getElementById('calendar-grid');
+            const monthLabel = document.getElementById('month-display');
+            const yearLabel = document.getElementById('year-display');
+            const limboBox = document.getElementById('limbo-display');
+            const mobileInfo = document.getElementById('mobile-day-info');
+            
+            Array.from(grid.children).slice(10).forEach(c => c.remove());
+
+            if (sq.isLimbo) {
+                yearLabel.innerText = `${sq.year} YOJ`;
+                monthLabel.innerText = "LIMBO";
+                let currentDay = sq.dayIndex === 4 && sq.isLeap ? leapDayData : limboData[sq.dayIndex];
+                mobileInfo.innerText = currentDay.name;
+                
+                document.getElementById('limbo-header').innerText = `LIMBO: ${sq.year} / ${sq.year + 1}`;
+                limboBox.style.display = "block";
+                grid.style.display = "none";
+                
+                if (sqToday.isLimbo && sqToday.dayIndex === sq.dayIndex && sqToday.year === sq.year) {
+                    limboBox.style.background = "#e1bee7"; 
+                } else if (sqToday.rawDiff > sq.rawDiff) {
+                    limboBox.style.background = "#fffde7";
+                    document.getElementById('limbo-day-name').innerHTML = `<span style="text-decoration: line-through; color: red;">X</span> ${currentDay.name}`;
+                } else {
+                    limboBox.style.background = "#fffde7";
+                    document.getElementById('limbo-day-name').innerText = currentDay.name;
+                }
+                document.getElementById('limbo-desc').innerText = currentDay.desc;
+            } else {
+                yearLabel.innerText = `${sq.year} YOJ`;
+                grid.style.display = "grid";
+                limboBox.style.display = "none";
+                monthLabel.innerText = months[sq.monthIdx];
+                
+                // Logic for Mobile Header (Day Name and Number)
+                const currentDayName = dayNames[(sq.day - 1) % 10];
+                mobileInfo.innerText = `${currentDayName} ${sq.day}`;
+
+                const totalDays = (sq.monthIdx === 8) ? 31 : 30;
+
+                for (let i = 1; i <= totalDays; i++) {
+                    const dayEl = document.createElement('div');
+                    dayEl.className = "day-cell";
+                    dayEl.style.padding = "8px 2px";
+                    dayEl.style.minHeight = "65px";
+                    dayEl.style.position = "relative";
+                    dayEl.style.border = "1px solid #e0e0e0";
+                    dayEl.style.overflow = "hidden";
+                    
+                    if (sqToday.year === sq.year && sqToday.monthIdx === sq.monthIdx && sqToday.day === i) {
+                        dayEl.style.background = "#e1bee7"; 
+                    } else {
+                        dayEl.style.background = "#fff";
+                    }
+
+                    const isPast = (sqToday.year > sq.year) || (sqToday.year === sq.year && sqToday.monthIdx > sq.monthIdx) || (sqToday.year === sq.year && sqToday.monthIdx === sq.monthIdx && sqToday.day > i);
+                    
+                    const dateNum = document.createElement('div');
+                    dateNum.innerHTML = isPast ? `<span style="color:red; position:absolute; left:2px; top:0px; font-size:1.2rem;">X</span>${i}` : i;
+                    dateNum.style.fontWeight = "bold";
+                    dayEl.appendChild(dateNum);
+                    
+                    let holiday = "";
+                    const key = `${sq.monthIdx}-${i}`;
+                    if (sq.monthIdx === 3 && i === 1) holiday = "Foundation";
+                    if (sq.monthIdx === 3 && i === 6) holiday = "Last Supper";
+                    if (sq.monthIdx === 3 && i === 7) holiday = "Crucifixion";
+                    if (sq.monthIdx === 3 && i === 10) holiday = "Resurrection";
+                    if (sq.monthIdx === 8 && i === 31) holiday = "Jesus' Birthday";
+                    if (customHolidays[key]) holiday = customHolidays[key];
+
+                    if (holiday) {
+                        const ev = document.createElement('div');
+                        ev.innerText = holiday;
+                        ev.style.fontSize = "0.45rem";
+                        ev.style.background = "#fff9c4";
+                        ev.style.color = "#b71c1c";
+                        ev.style.marginTop = "2px";
+                        ev.style.lineHeight = "1";
+                        dayEl.appendChild(ev);
+                    }
+                    grid.appendChild(dayEl);
+                }
+            }
+            document.getElementById('current-pfs-year').innerText = `Current Year: ${sq.year} PFS`;
+        }
+
+        document.getElementById('prev-month').onclick = () => { viewDate.setDate(viewDate.getDate() - 30); render(); };
+        document.getElementById('next-month').onclick = () => { viewDate.setDate(viewDate.getDate() + 30); render(); };
+        
+        document.getElementById('edit-trigger').onclick = () => {
+            if (prompt("Enter Admin Code:") === "1022") {
+                const zone = prompt("Select Zone to Edit: 1 (Standard Months), 2 (Limbo Days), 3 (Leap Day)");
+                if (zone === "1") {
+                    const action = prompt("Type 'ADD' or 'DELETE':").toUpperCase();
+                    let mList = months.map((m, i) => `${i}: ${m}`).join("\n");
+                    const mIdx = prompt("Select Month:\n" + mList);
+                    const dNum = prompt("Select Day Number (1-31):");
+                    if (action === "ADD") customHolidays[`${mIdx}-${dNum}`] = prompt("Event Name:");
+                    else delete customHolidays[`${mIdx}-${dNum}`];
+                } else if (zone === "2") {
+                    const lIdx = prompt("Select Limbo Day to Edit Description (0-3):");
+                    limboData[lIdx].desc = prompt("New Description for " + limboData[lIdx].name + ":");
+                } else if (zone === "3") {
+                    leapDayData.desc = prompt("New Leap Day Description:");
+                }
+                localStorage.setItem('suquelish_holidays', JSON.stringify(customHolidays));
+                render();
+            } else { alert("Access Denied."); }
+        };
+        render();
+    })();
+    </script>
+</div>
