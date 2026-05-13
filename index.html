@@ -61,7 +61,11 @@
     </div>
 
     <div style="margin-top: 15px; font-size: 0.8rem; color: #555; border-top: 1px solid #ddd; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <span id="current-pfs-year"></span>
+        <div style="display: flex; flex-direction: column;">
+            <span id="current-pfs-year"></span>
+            <span id="gregorian-equivalent" style="font-size: 0.75rem; color: #555;"></span>
+            <span id="world-clock" style="font-size: 0.75rem; color: #388e3c; font-weight: bold;"></span>
+        </div>
         <span id="edit-trigger" style="cursor: pointer; text-decoration: underline; background: #eee; padding: 4px 8px; border-radius: 4px;">Admin Access</span>
     </div>
 
@@ -100,6 +104,22 @@
             return { isLimbo: false, monthIdx: Math.floor(dayOfYear / 30), day: (dayOfYear % 30) + 1, year: currentYOJ, rawDiff: diff };
         }
 
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('gregorian-equivalent').innerText = now.toLocaleDateString('en-US', options);
+            
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            document.getElementById('world-clock').innerText = `${hours}:${minutes}:${seconds} ${ampm}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
         function render() {
             const sq = getSuquelishDate(viewDate);
             const sqToday = getSuquelishDate(todayReal);
@@ -137,7 +157,6 @@
                 limboBox.style.display = "none";
                 monthLabel.innerText = months[sq.monthIdx];
                 
-                // Logic for Mobile Header (Day Name and Number)
                 const currentDayName = dayNames[(sq.day - 1) % 10];
                 mobileInfo.innerText = `${currentDayName} ${sq.day}`;
 
